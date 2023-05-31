@@ -1,0 +1,45 @@
+name: Deploy Discord bot
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+env:
+  REPO_NAME: ${{ github.event.repository.name }}
+  REPO_OWNER: ${{ github.repository_owner }}
+  USER: down
+
+jobs:
+  push:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    environment: Staging
+    steps:
+      - name: Tag latest
+        uses: appleboy/ssh-action@dce9d565de8d876c11d93fa4fe677c0285a66d78
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: 22
+          username: down
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd /home/${{ env.USER }}/${{ env.REPO_NAME }}
+            git pull
+            docker compose build
+  run:
+    name: Run
+    needs: push
+    runs-on: ubuntu-latest
+    environment: Staging
+    steps:
+      - name: Build Docker Image
+        uses: appleboy/ssh-action@dce9d565de8d876c11d93fa4fe677c0285a66d78
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: 22
+          username: down
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd /home/${{ env.USER }}/${{ env.REPO_NAME }}
+            docker compose up -d
